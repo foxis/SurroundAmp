@@ -4,12 +4,12 @@
 #include <stdint.h>
 
 WidgetContainer w_home_vu(0, 60, WidgetContainer::VERTICAL, {
-    new WidgetHBarVolume(236, 10, 50, 255),
-    new WidgetHBarVolume(236, 10, 50, 255),
-    new WidgetHBarVolume(236, 10, 50, 255),
-    new WidgetHBarVolume(236, 10, 190, 255),
-    new WidgetHBarVolume(236, 10, 0, 255),
-    new WidgetHBarVolume(236, 10, -50, 255),
+    new WidgetHBarVolume(230, 10, 0, 255, 23),
+    new WidgetHBarVolume(230, 10, 0, 255, 23),
+    new WidgetHBarVolume(230, 10, 0, 255, 23),
+    new WidgetHBarVolume(230, 10, 0, 255, 23),
+    new WidgetHBarVolume(230, 10, 0, 255, 23),
+    new WidgetHBarVolume(230, 10, 0, 255, 23),
 }, 2);
 WidgetContainer w_home_status(28, 10, WidgetContainer::HORIZONTAL, {
     new WidgetLabel(0, 0, 24, 20, "M"),  // Mute
@@ -20,6 +20,15 @@ WidgetContainer w_home_status(28, 10, WidgetContainer::HORIZONTAL, {
     new WidgetLabel(0, 0, 24, 20, ""),  // Preset
     //new WidgetLabel(0, 0, 70, 24, ""),  // misc
 }, 5);
+
+// WidgetContainer w_debug(0, w_home_vu.y + w_home_vu.h, WidgetContainer::VERTICAL, {
+//     new WidgetLabel(240, 16, ""),
+//     new WidgetLabel(240, 16, ""),
+//     new WidgetLabel(240, 16, ""),
+//     new WidgetLabel(240, 16, ""),
+//     new WidgetLabel(240, 16, ""),
+//     new WidgetLabel(240, 16, ""),
+// }, 0);
 
 #ifdef __arm__
 // should use uinstd.h to define sbrk but Due causes a conflict
@@ -60,6 +69,9 @@ public:
             i->set_background_color(WC_DARK_BLUE);
             i->set_content_color(WC_LIGHT_BLUE);
         }
+        // for (auto i: w_debug.widgets) {
+        //     i->set_border(0,0);
+        // }
     }
 
     virtual void on_handle(unsigned long now) {
@@ -80,6 +92,7 @@ public:
 
         w_home_vu.draw(&tft);
         w_home_status.draw(&tft);
+        // w_debug.draw(&tft);
 
         auto left = control_left.getValue();
         auto right = control_right.getValue();
@@ -92,17 +105,24 @@ public:
         auto rb = control_right.getButton();
         auto lb = control_left.getButton();
 
-        if (rb == DigitalButton::DoubleClicked)
+        if (rb == ClickEncoder::DoubleClicked)
             enter(now, MENU_MUTE);
-        if (rb == DigitalButton::Held)
+        if (rb == ClickEncoder::Held)
+            back_light_level = DISPLAY_BL_MIN;
+        if (rb == ClickEncoder::Released)
             enter(now, MENU_SLEEP);
-        else if (rb == DigitalButton::Clicked)
+        else if (rb == ClickEncoder::Clicked)
             enter(now, MENU_MAIN);
-        else if (lb == DigitalButton::Clicked)
+        else if (lb == ClickEncoder::Clicked)
             enter(now, MENU_QUICK);
     }
 
     virtual void on_enter(unsigned long now) {
+        tft.fillScreen(WC_BLACK);
+        control_left.getValue();
+        control_right.getValue();
+        control_left.getButton();
+        control_right.getButton();
         w_home_vu.set_redraw_all();
         w_home_status.set_redraw_all();
         tft.fillScreen(WC_BLACK);

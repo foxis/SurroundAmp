@@ -3,6 +3,15 @@
 
 #include <Arduino.h>
 
+#define DISPLAY_BL_MIN 5
+#define DISPLAY_BL_SLEEP 2
+#define DISPLAY_BL_MAX 100
+#define DISPLAY_BL_DEFAULT 30
+#define DISPLAY_BL_TIMEOUT 30000L
+#define DISPLAY_BL_OFF_TIMEOUT 600000L
+
+#define SETTINGS_MAGIC 0xDBAF
+#define SETTINGS_ADDR 0x800FE00
 #define NUM_SR_CHANNELS 6
 #define NUM_PRESETS 4
 #define NUM_TONES 3
@@ -24,10 +33,10 @@ typedef struct {
 } input_t;
 
 typedef struct {
-    input_t input;
-    tone_t tone[NUM_TONES];
-    channel_t channels[NUM_SR_CHANNELS];
-    uint8_t flags;
+    input_t input;                  // 1 byte
+    tone_t tone[NUM_TONES];         // 3 bytes
+    channel_t channels[NUM_SR_CHANNELS];    // 6 bytes
+    uint8_t flags;                  // 1 byte
 } preset_t;
 
 typedef struct {
@@ -42,21 +51,25 @@ typedef struct {
 } mute_t;
 
 typedef struct {
-    input_t input;
-    mute_t mute;
-    channel_t volume;
-    tone_t tone[NUM_TONES];
-    channel_t channels[NUM_SR_CHANNELS];
+    input_t input;                  // 1 byte
+    mute_t mute;                    // 1 byte
+    channel_t volume;               // 1 byte
+    tone_t tone[NUM_TONES];         // 3 bytes
+    channel_t channels[NUM_SR_CHANNELS];    // 6 bytes
 } master_t;
 
 typedef struct {
-    master_t master;
-    uint8_t selected_preset;
-    preset_t presets[NUM_PRESETS];
-} settings_t;
+    uint16_t magic;                 // 2 bytes
+    master_t master;                // 12 bytes
+    uint8_t selected_preset;        // 1 byte
+    preset_t presets[NUM_PRESETS];  // 4 * 11 bytes
+    uint8_t padding;                
+} settings_t;                       // 15 + 44 + 1 = 60 bytes or 30 words
+
 
 settings_t settings = {
-    .master = {
+    .magic=SETTINGS_MAGIC,
+    .master={
         .input={
             .channel=4,
             .es=0,
@@ -121,13 +134,90 @@ settings_t settings = {
     },
 };
 
-int read_settings(settings_t * settings) {
+#define BIT0 (1<<0)
+#define BIT1 (1<<1)
+#define BIT2 (1<<2)
+#define BIT3 (1<<3)
+#define BIT4 (1<<4)
+#define BIT5 (1<<5)
+#define BIT6 (1<<6)
+#define BIT7 (1<<7)
 
-    return 0;
+int  writeSector(uint32_t Address,void * values, uint16_t size)
+{              
+    uint16_t *AddressPtr;
+    uint16_t *valuePtr;
+    AddressPtr = (uint16_t *)Address;
+    valuePtr=(uint16_t *)values;
+    size = size / 2;  // incoming value is expressed in bytes, not 16 bit words
+    while(size) {        
+        // unlock the flash 
+        // Key 1 : 0x45670123
+        // Key 2 : 0xCDEF89AB
+        FLASH->KEYR = 0x45670123;
+        FLASH->KEYR = 0xCDEF89AB;
+        FLASH->CR &= ~BIT1; // ensure PER is low
+        FLASH->CR |= BIT0;  // set the PG bit        
+        *(AddressPtr) = *(valuePtr);
+        while(FLASH->SR & BIT0); // wait while busy
+        if (FLASH->SR & BIT2)
+            return -1; // flash not erased to begin with
+        if (FLASH->SR & BIT4)
+            return -2; // write protect error
+        AddressPtr++;
+        valuePtr++;
+        size--;
+    }    
+    return 0;    
+}
+
+void eraseSector(uint32_t SectorStartAddress)
+{
+    FLASH->KEYR = 0x45670123;
+    FLASH->KEYR = 0xCDEF89AB;
+    FLASH->CR &= ~BIT0;  // Ensure PG bit is low
+    FLASH->CR |= BIT1; // set the PER bit
+    FLASH->AR = SectorStartAddress;
+    FLASH->CR |= BIT6; // set the start bit 
+    while(FLASH->SR & BIT0); // wait while busy
+}
+
+void readSector(uint32_t SectorStartAddress, void * values, uint16_t size)
+{
+    uint16_t *AddressPtr;
+    uint16_t *valuePtr;
+    AddressPtr = (uint16_t *)SectorStartAddress;
+    valuePtr=(uint16_t *)values;
+    size = size/2; // incoming value is expressed in bytes, not 16 bit words
+    while(size)
+    {
+        *((uint16_t *)valuePtr)=*((uint16_t *)AddressPtr);
+        valuePtr++;
+        AddressPtr++;
+        size--;
+    }
 }
 
 int write_settings(settings_t * settings) {
+    noInterrupts();
+    eraseSector(SETTINGS_ADDR);
+    writeSector(SETTINGS_ADDR, settings, sizeof(*settings));
+    interrupts();
     return 0;
 }
+
+int read_settings(settings_t * _settings) {
+    settings_t tmp;
+    readSector(SETTINGS_ADDR, &tmp, sizeof(tmp));
+    if (tmp.magic != SETTINGS_MAGIC) {
+        write_settings(&settings);
+        read_settings(_settings);
+        return 0;
+    }
+    memcpy(_settings, &tmp, sizeof(tmp));
+    return 0;
+}
+
+
 
 #endif

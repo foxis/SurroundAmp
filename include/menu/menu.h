@@ -27,11 +27,7 @@ auto tft = TFT_eSPI();
 
 ClickEncoder control_left(BUTTON_LEFT_A, BUTTON_LEFT_B, BUTTON_LEFT_C);
 ClickEncoder control_right(BUTTON_RIGHT_A, BUTTON_RIGHT_B, BUTTON_RIGHT_C);
-#define DISPLAY_BL_MIN 8
-#define DISPLAY_BL_MAX 100
-#define DISPLAY_BL_DEFAULT 30
-#define DISPLAY_BL_TIMEOUT 30000L
-#define DISPLAY_BL_OFF_TIMEOUT 600000L
+
 
 unsigned long last_user_input = 0;
 unsigned long last_activity = 0;
@@ -42,7 +38,6 @@ void on_user_input() {
   last_activity = last_user_input = millis();
   if (back_light_level != DISPLAY_BL_MAX) {
     back_light_level = DISPLAY_BL_MAX;
-    analogWrite(DISPLAY_BL, back_light_level);
   }
 }
 
@@ -57,7 +52,7 @@ typedef enum {
     MENU_SLEEP,
 } menu_name_t;
 
-typedef void (*on_changed_func)();
+typedef std::function<void()> on_changed_func;
 
 class MenuItemBase {
     MenuItemBase() {}
@@ -125,8 +120,9 @@ public:
         while (item->parent)
             item = item->parent;
         item = item->find(name);
-        if (item) 
+        if (item) {
             item->enter(now, this);
+        }
     }
     void enter(unsigned long now, MenuItemBase* parent) {
         current = items.begin();
@@ -342,7 +338,8 @@ public:
 
     virtual void on_enter(unsigned long now) { 
         p_value->channel = value;
-        input_changed();
+        if (p_value == &settings.master.input)
+            input_changed();
         leave(now); 
     }
 };
@@ -357,7 +354,8 @@ public:
 
     virtual void on_enter(unsigned long now) { 
         p_value->tone ^= 1;
-        input_changed();
+        if (p_value == &settings.master.mute)
+            mute_changed();
         leave(now); 
     }
 };
@@ -371,7 +369,8 @@ public:
 
     virtual void on_enter(unsigned long now) { 
         p_value->es ^= 1;
-        input_changed();
+        if (p_value == &settings.master.input)
+            input_changed();
         leave(now); 
     }
 };
@@ -385,7 +384,8 @@ public:
 
     virtual void on_enter(unsigned long now) { 
         p_value->mixed ^= 1;
-        input_changed();
+        if (p_value == &settings.master.input)
+            input_changed();
         leave(now); 
     }
 };

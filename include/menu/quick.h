@@ -83,10 +83,78 @@ public:
     }
 };
 class QuickSleep : public WidgetMenuItem<Widget> {
+    unsigned long last_now;
+    struct {
+        uint16_t x, y;
+        int16_t dx, dy;
+        uint8_t r;
+        uint16_t c;
+    } balls[13];
 public:
     QuickSleep(Widget * widget) : WidgetMenuItem<Widget>(MENU_SLEEP, widget) {}
+
+    virtual void on_handle(unsigned long now) {
+        auto btn = control_right.getButton();
+        auto rot = control_right.getValue();
+        if (btn == ClickEncoder::Released || digitalRead(AMP_POWER)) {
+            digitalWrite(AMP_POWER, HIGH);
+            mute_changed(false);
+            reset(now);
+        } else if (btn == ClickEncoder::Clicked || btn == ClickEncoder::Held || rot != 0) {
+            on_user_input();
+        }
+
+        draw(true);
+        for (int i = 0; i < 13; i++) {
+            uint16_t x = balls[i].x + balls[i].dx;
+            uint16_t y = balls[i].y + balls[i].dy;
+            uint16_t r = balls[i].r; 
+            if ( x <= (r << 8) || x >= ((240 - r) << 8) ) 
+                balls[i].dx = -balls[i].dx;
+            else
+                balls[i].x = x;
+            if ( y <= (3 << 8) || y >= (237 << 8) ) 
+                balls[i].dy = -balls[i].dy;
+            else
+                balls[i].y = y;
+        }
+        draw(false);
+    }
+
+    void draw(bool erase) {
+        for (int i = 0; i < 13; i++)
+            tft.fillCircle(balls[i].x >> 8, balls[i].y >> 8, balls[i].r, erase ? WC_BLACK : balls[i].c);
+    }
+
     virtual void on_enter(unsigned long now) {
-        reset(now);
+        last_now = now;
+        control_left.getValue();
+        control_right.getValue();
+        control_left.getButton();
+        control_right.getButton();
+        snd_processor.mute_all(true);
+        digitalWrite(AMP_POWER, LOW);
+        tft.fillScreen(WC_BLACK);
+        const uint16_t colors[] = {
+            WC_GREEN_YELLOW,
+            WC_RED,
+            WC_BLUE,
+            WC_GOLD,
+            WC_VIOLET,
+            WC_PINK,
+            WC_GREEN,
+            WC_YELLOW,
+            WC_WHITE,
+        };
+        for (int i = 0; i < 13; i++) {
+            balls[i].x = random(3, 237) << 8;
+            balls[i].y = random(3, 237) << 8;
+            balls[i].dx = 0x0100 - (random(255) << 2);
+            balls[i].dy = 0x0100 - (random(255) << 2);
+            balls[i].r = random(3, 6);
+            balls[i].c = colors[random(sizeof(colors) / 2)];
+        }
+        back_light_level = DISPLAY_BL_SLEEP;
     }
 };
 
@@ -95,12 +163,12 @@ class QuickChannelTrim : public RotaryEncoderMenu<Widget> {
 
 public:
     QuickChannelTrim(Widget * widget, ClickEncoder * ctrl, channel_t * channels) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, ctrl, {
-        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(1), ctrl, channels, channel_trim_changed),
-        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(2), ctrl, channels + 1, channel_trim_changed),
-        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(3), ctrl, channels + 2, channel_trim_changed),
-        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(4), ctrl, channels + 3, channel_trim_changed),
-        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(5), ctrl, channels + 4, channel_trim_changed),
-        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(6), ctrl, channels + 5, channel_trim_changed),
+        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(1), ctrl, channels, [channels](){if (channels == settings.master.channels) channel_trim_changed();}),
+        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(2), ctrl, channels + 1, [channels](){if (channels == settings.master.channels) channel_trim_changed();}),
+        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(3), ctrl, channels + 2, [channels](){if (channels == settings.master.channels) channel_trim_changed();}),
+        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(4), ctrl, channels + 3, [channels](){if (channels == settings.master.channels) channel_trim_changed();}),
+        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(5), ctrl, channels + 4, [channels](){if (channels == settings.master.channels) channel_trim_changed();}),
+        new HBarMenuItem<channel_t, WidgetHBar>(w_quick_channels.get<WidgetContainer>(6), ctrl, channels + 5, [channels](){if (channels == settings.master.channels) channel_trim_changed();}),
         new WidgetBackMenuItem(w_quick_channels[8]),
     }) {
         this->channels = channels;
@@ -121,9 +189,9 @@ class QuickTone : public RotaryEncoderMenu<Widget> {
     tone_t * tone;
 public:
     QuickTone(Widget * widget, ClickEncoder * ctrl, tone_t * tone) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, ctrl, {
-        new HBarMenuItem<tone_t, WidgetHBarSigned>(w_quick_tone.get<WidgetContainer>(1), ctrl, tone, tone_changed),
-        new HBarMenuItem<tone_t, WidgetHBarSigned>(w_quick_tone.get<WidgetContainer>(2), ctrl, tone + 1, tone_changed),
-        new HBarMenuItem<tone_t, WidgetHBarSigned>(w_quick_tone.get<WidgetContainer>(3), ctrl, tone + 2, tone_changed),
+        new HBarMenuItem<tone_t, WidgetHBarSigned>(w_quick_tone.get<WidgetContainer>(1), ctrl, tone, [tone](){if (tone == settings.master.tone) tone_changed();}),
+        new HBarMenuItem<tone_t, WidgetHBarSigned>(w_quick_tone.get<WidgetContainer>(2), ctrl, tone + 1, [tone](){if (tone == settings.master.tone) tone_changed();}),
+        new HBarMenuItem<tone_t, WidgetHBarSigned>(w_quick_tone.get<WidgetContainer>(3), ctrl, tone + 2, [tone](){if (tone == settings.master.tone) tone_changed();}),
         new WidgetToneDefeatSelectionMenuItem(w_quick_tone[4], &settings.master.mute),
         new WidgetBackMenuItem(w_quick_tone[6]),
     }) {

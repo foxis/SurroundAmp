@@ -46,6 +46,7 @@ WidgetContainer w_main_preset(WidgetContainer::VERTICAL, {
     new WidgetLabel(236, 20, "> Channel TRIM"),
     new WidgetLabel(236, 20, "> Adjust Tone"),
     new WidgetSeparator(236, 5),
+    new WidgetLabel(236, 20, "Copy from master"),
     new WidgetLabel(236, 20, "Set as default"),
     new WidgetLabel(236, 20, "Back"),
 });
@@ -64,6 +65,19 @@ public:
     MainSave(Widget * widget) : WidgetMenuItem<Widget>(MENU_NONE, widget) {}
     virtual void on_enter(unsigned long now) {
         write_settings(&settings);
+        leave(now);
+    }
+};
+class CopyFromMaster : public WidgetMenuItem<Widget> {
+    preset_t * preset;
+public:
+    CopyFromMaster(Widget * widget, preset_t * preset) : WidgetMenuItem<Widget>(MENU_NONE, widget) { 
+        this->preset = preset; 
+    }
+    virtual void on_enter(unsigned long now) {
+        memcpy(preset->channels, settings.master.channels, sizeof(preset->channels));
+        memcpy(&preset->input, &settings.master.input, sizeof(preset->input));
+        memcpy(preset->tone, settings.master.tone, sizeof(preset->tone));
         leave(now);
     }
 };
@@ -108,8 +122,9 @@ public:
         new MainInput(w_main_preset[1], &settings.presets[id].input),
         new QuickChannelTrim(w_main_preset[2], &control_right, settings.presets[id].channels),
         new QuickTone(w_main_preset[3], &control_right, settings.presets[id].tone),
-        new WidgetSelectionMenuItem<uint8_t>(w_main_preset[5], &settings.selected_preset, id, selected_preset_changed),
-        new WidgetBackMenuItem(w_main_preset[6]),
+        new CopyFromMaster(w_main_preset[5], &settings.presets[id]),
+        new WidgetSelectionMenuItem<uint8_t>(w_main_preset[6], &settings.selected_preset, id, selected_preset_changed),
+        new WidgetBackMenuItem(w_main_preset[7]),
     }) {
         this->id = id;
         SETUP_MAIN_CONTAINER(w_main_preset);

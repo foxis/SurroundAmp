@@ -35,6 +35,7 @@ public:
     virtual void on_enter(unsigned long now) {
         volume.set_value(settings.master.volume);
         volume.set_redraw_all();
+        label.set_redraw_all();
         volume.draw(&tft);
         label.draw(&tft);
         last_now = now;
@@ -76,6 +77,7 @@ public:
     virtual void on_enter(unsigned long now) {
         bass.set_value(settings.master.channels[3]);
         bass.set_redraw_all();
+        label.set_redraw_all();
         bass.draw(&tft);
         label.draw(&tft);
         last_now = now;
