@@ -5,19 +5,19 @@
 
 class WidgetLabel: public Widget {
 public:
-    String current;
+    String value;
     bool resize;
 
 public:
-    WidgetLabel(const String& current) : WidgetLabel(0, 0, 0, 0, current, true) {}
-    WidgetLabel(uint8_t w, uint8_t h, const String& current) : WidgetLabel(0, 0, w, h, current, true) {}
-    WidgetLabel(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const String& current, bool resize=false) : Widget(x, y, w, h) {
+    WidgetLabel(const String& value) : WidgetLabel(0, 0, 0, 0, value, true) {}
+    WidgetLabel(uint8_t w, uint8_t h, const String& value) : WidgetLabel(0, 0, w, h, value, true) {}
+    WidgetLabel(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const String& value, bool resize=false) : Widget(x, y, w, h) {
         this->resize = resize;
         fg_color = WC_WHITE; 
         bg_color = WC_BLACK;
         border_color = WC_BLACK;
         set_border(2, 2); 
-        set_text(current);
+        set_text(value);
     }
 
     void printf(const char *format, ...) {
@@ -30,8 +30,8 @@ public:
     }
 
     void set_text(const String& val) {
-        if (val != current) {
-            current = val;
+        if (val != value) {
+            this->value = val;
             set_background_changed(true);
             set_content_changed(true);
         }
@@ -52,7 +52,7 @@ public:
         #endif
         gfx->setCursor(this->x + bw + pw, this->y + bw + pw + h);
         gfx->setTextColor(this->fg_color);
-        gfx->print(this->current);
+        gfx->print(this->value);
 
         #if defined(GET_TEXT_BOUNDS)
         w +=  (pw + bw) * 2;
@@ -70,9 +70,9 @@ public:
 
 class WidgetTitleLabel : public WidgetLabel {
 public:
-    WidgetTitleLabel(const String& current) : WidgetTitleLabel(0, 0, 0, 0, current, true) {}
-    WidgetTitleLabel(uint8_t w, uint8_t h, const String& current) : WidgetTitleLabel(0, 0, w, h, current, true) {}
-    WidgetTitleLabel(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const String& current, bool resize=false) : WidgetLabel(x, y, w, h, current, resize) {
+    WidgetTitleLabel(const String& value) : WidgetTitleLabel(0, 0, 0, 0, value, true) {}
+    WidgetTitleLabel(uint8_t w, uint8_t h, const String& value) : WidgetTitleLabel(0, 0, w, h, value, true) {}
+    WidgetTitleLabel(uint8_t x, uint8_t y, uint8_t w, uint8_t h, const String& value, bool resize=false) : WidgetLabel(x, y, w, h, value, resize) {
         bg_color = WC_DARK_BLUE;
         fg_color = WC_GOLD;
         set_border(0, 4);

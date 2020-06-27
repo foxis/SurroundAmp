@@ -96,14 +96,13 @@ public:
 
         auto left = control_left.getValue();
         auto right = control_right.getValue();
+        auto rb = control_right.getButton();
+        auto lb = control_left.getButton();
 
         if (left != 0)
             enter(now, MENU_MASTER_BASS);
         else if (right != 0) 
             enter(now, MENU_MASTER_VOLUME);
-
-        auto rb = control_right.getButton();
-        auto lb = control_left.getButton();
 
         if (rb == ClickEncoder::DoubleClicked)
             enter(now, MENU_MUTE);
@@ -115,6 +114,8 @@ public:
             enter(now, MENU_MAIN);
         else if (lb == ClickEncoder::Clicked)
             enter(now, MENU_QUICK);
+        else if (lb == ClickEncoder::DoubleClicked) 
+            enter(now, MENU_INPUT_SELECT);
     }
 
     virtual void on_enter(unsigned long now) {
@@ -125,6 +126,5 @@ public:
         control_right.getButton();
         w_home_vu.set_redraw_all();
         w_home_status.set_redraw_all();
-        tft.fillScreen(WC_BLACK);
     }
 };

@@ -2,7 +2,6 @@
 #include "widgets/bar_horizontal_signed.h"
 
 
-
 class VolumeMaster : public MenuItemBase
 {
     WidgetHBar volume;

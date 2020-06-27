@@ -94,7 +94,6 @@ public:
     }
 
     void master(channel_t val) {
-        channel_t data;
         val = 79 - min(val, (channel_t)79);
         Wire.beginTransmission(PT2322_ADDR);
         Wire.write(PT2322_MASTER_10DB | (val / 10));

@@ -3,15 +3,15 @@
 
 #include <Arduino.h>
 
-#define DISPLAY_BL_MIN 5
+#define DISPLAY_BL_MIN 4
 #define DISPLAY_BL_SLEEP 2
 #define DISPLAY_BL_MAX 100
 #define DISPLAY_BL_DEFAULT 30
 #define DISPLAY_BL_TIMEOUT 30000L
 #define DISPLAY_BL_OFF_TIMEOUT 600000L
 
-#define SETTINGS_MAGIC 0xDBAF
-#define SETTINGS_ADDR 0x800FE00
+#define SETTINGS_MAGIC 0xDBAE
+#define SETTINGS_ADDR 0x800FF00
 #define NUM_SR_CHANNELS 6
 #define NUM_PRESETS 4
 #define NUM_TONES 3
@@ -85,9 +85,9 @@ settings_t settings = {
             .tone=1,
             .all=0,
         },
-        .volume=15,
+        .volume=45,
         .tone={0, 0, 0},
-        .channels={5, 5, 5, 5, 5, 5},
+        .channels={4, 6, 4, 4, 4, 7},
     },
     .selected_preset = 255,
     .presets={
@@ -98,17 +98,7 @@ settings_t settings = {
                 .mixed=0,
             },
             .tone={0, 0, 0},
-            .channels={5, 6, 5, 5, 5, 6},
-            .flags=0,
-        },
-        {
-            .input={
-                .channel=4,
-                .es=0,
-                .mixed=0,
-            },
-            .tone={7, 0, 0},
-            .channels={6, 5, 6, 5, 6, 5},
+            .channels={4, 6, 5, 5, 5, 7},
             .flags=0,
         },
         {
@@ -118,7 +108,7 @@ settings_t settings = {
                 .mixed=0,
             },
             .tone={0, 0, 0},
-            .channels={5, 5, 5, 5, 5, 5},
+            .channels={4, 4, 4, 4, 4, 4},
             .flags=0,
         },
         {
@@ -128,7 +118,17 @@ settings_t settings = {
                 .mixed=0,
             },
             .tone={0, 0, 0},
-            .channels={5, 5, 5, 5, 5, 5},
+            .channels={4, 6, 8, 6, 4, 6},
+            .flags=0,
+        },
+        {
+            .input={
+                .channel=4,
+                .es=0,
+                .mixed=0,
+            },
+            .tone={0, 0, 0},
+            .channels={7, 5, 8, 6, 6, 4},
             .flags=0,
         },
     },

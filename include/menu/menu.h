@@ -5,25 +5,12 @@
 #include <vector>
 #include <initializer_list>
 #include <ClickEncoder.h>
-#if !defined(ST7789_DRIVER)
-#include <Adafruit_GFX.h>
-#include <Adafruit_ST7789.h>
-#include <Fonts/FreeMonoBoldOblique12pt7b.h>
-#else
-#include <TFT_eSPI.h>
-#endif
-#include <SPI.h>
 #include "pins.h"
 #include "settings.h"
+#include "display.h"
 #include "soundctrl.h"
 #include "widgets/widget.h"
 
-#if !defined(ST7789_DRIVER)
-SPIClass tft_spi(PB15, PB14, PB13);
-auto tft = Adafruit_ST7789(&tft_spi, -1, DISPLAY_DC, DISPLAY_RST);
-#else
-auto tft = TFT_eSPI();
-#endif
 
 ClickEncoder control_left(BUTTON_LEFT_A, BUTTON_LEFT_B, BUTTON_LEFT_C);
 ClickEncoder control_right(BUTTON_RIGHT_A, BUTTON_RIGHT_B, BUTTON_RIGHT_C);
@@ -42,14 +29,15 @@ void on_user_input() {
 }
 
 typedef enum {
-    MENU_NONE,
-    MENU_HOME,
+    MENU_HOME = 1,
     MENU_MASTER_VOLUME,
     MENU_MASTER_BASS,
+    MENU_INPUT_SELECT,
     MENU_QUICK, 
     MENU_MAIN,
     MENU_MUTE,
     MENU_SLEEP,
+    MENU_NONE = 255,
 } menu_name_t;
 
 typedef std::function<void()> on_changed_func;
@@ -89,10 +77,11 @@ public:
     void activate(unsigned long now, bool val=true) {
         auto tmp = is_active;
         is_active = val;
-        if (val == true && tmp == false)
+        if (val == true && tmp == false) {
             on_enter(now);
-        else if (val == false && tmp == true)
+        } else if (val == false && tmp == true) {
             on_leave(now);
+        }
         on_user_input();
     }
 
@@ -226,15 +215,13 @@ public:
 template<class T = Widget>
 class RotaryEncoderMenu : public WidgetMenuItem<T> {
 public:
-    ClickEncoder *ctrl;
-
-    RotaryEncoderMenu(menu_name_t name, T * widget, ClickEncoder * ctrl, std::initializer_list<MenuItemBase*> items) : WidgetMenuItem<T>(name, widget, items) {
-        this->ctrl = ctrl;
+    RotaryEncoderMenu(menu_name_t name, T * widget, std::initializer_list<MenuItemBase*> items) : WidgetMenuItem<T>(name, widget, items) {
     }
 
     virtual void on_handle(unsigned long now) {
-        auto change = ctrl->getValue();
-        auto btn = ctrl->getButton();
+        auto change = control_left.getValue() + control_right.getValue();
+        auto btn = control_left.getButton();
+        auto btnr = control_right.getButton();
 
         if (change > 0) 
             this->next(now);
@@ -242,34 +229,34 @@ public:
             this->prev(now);
 
         if (change != 0) {
+            on_user_input();
             this->last_now = now;
         }
 
-        if (btn == ClickEncoder::Held ) {
+        if (btn == ClickEncoder::Held || btnr == ClickEncoder::Held) {
             this->leave(now);
-        } else if (btn == ClickEncoder::Clicked) {
+        } else if (btn == ClickEncoder::Clicked || btnr == ClickEncoder::Clicked) {
             this->enter(now);
         }
 
-        on_control(now, change, btn);
         WidgetMenuItem<T>::on_handle(now);
     }
     virtual void on_enter(unsigned long now) {
         this->last_now = now;
+        control_left.getValue();
+        control_right.getValue();
+        control_left.getButton();
+        control_right.getButton();
     }
-
-    virtual void on_control(unsigned long now, int16_t change, ClickEncoder::Button btn) {}
 };
 
 template<class T, class T1>
 class HBarMenuItem : public WidgetMenuItem<WidgetContainer> {
     T * p_value;
-    ClickEncoder *ctrl;
     on_changed_func on_changed;
 public:
-    HBarMenuItem(WidgetContainer* widget, ClickEncoder * ctrl, T * p_value, on_changed_func on_changed=NULL) : WidgetMenuItem<WidgetContainer>(MENU_NONE, widget) {
+    HBarMenuItem(WidgetContainer* widget, T * p_value, on_changed_func on_changed=NULL) : WidgetMenuItem<WidgetContainer>(MENU_NONE, widget) {
         this->p_value = p_value;
-        this->ctrl = ctrl;
         this->on_changed = on_changed;
         for (auto i : widget->widgets) {
             i->set_border(0);
@@ -278,8 +265,9 @@ public:
         (*widget)[1]->set_border(1);
     }
     virtual void on_handle(unsigned long now) { 
-        auto change = ctrl->getValue();
-        auto btn = ctrl->getButton();
+        auto change = control_left.getValue() + control_right.getValue();
+        auto btn = control_left.getButton();
+        auto btnr = control_right.getButton();
 
         if (change != 0) {
             widget->get<T1>(1)->add_value(change);
@@ -288,8 +276,9 @@ public:
             if (on_changed) on_changed();
         }
 
-        if (btn == ClickEncoder::Clicked) {
+        if (btn == ClickEncoder::Clicked || btnr == ClickEncoder::Clicked) {
             leave(now);
+            return;
         }
 
         WidgetMenuItem::on_handle(now);
@@ -298,10 +287,18 @@ public:
     virtual void on_enter(unsigned long now) { 
         widget->get<T1>(1)->set_value(*p_value);
         widget->set_border_color(WC_GREEN);
+        control_left.getValue();
+        control_right.getValue();
+        control_left.getButton();
+        control_right.getButton();
         last_now = now;
     }
     virtual void on_leave(unsigned long now) {
         widget->set_border_color(WC_SILVER);
+        control_left.getValue();
+        control_right.getValue();
+        control_left.getButton();
+        control_right.getButton();
         WidgetMenuItem::on_leave(now);
     }
 };

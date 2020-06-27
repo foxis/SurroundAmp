@@ -32,10 +32,10 @@ WidgetContainer w_main_input(WidgetContainer::VERTICAL, {
 
 WidgetContainer w_main_presets(WidgetContainer::VERTICAL, {
     new WidgetTitleLabel(236, 30, "PRESETS"),
-    new WidgetLabel(236, 20, "Preset 1"),
-    new WidgetLabel(236, 20, "Preset 2"),
-    new WidgetLabel(236, 20, "Preset 3"),
-    new WidgetLabel(236, 20, "Preset 4"),
+    new WidgetLabel(236, 20, "Music"),
+    new WidgetLabel(236, 20, "Music 1"),
+    new WidgetLabel(236, 20, "Movie"),
+    new WidgetLabel(236, 20, "Movie 1"),
     new WidgetSeparator(236, 5),
     new WidgetLabel(236, 20, "Back"),
 });
@@ -85,7 +85,7 @@ public:
 class MainInput : public RotaryEncoderMenu<Widget>
 {
 public:
-    MainInput(Widget * widget, input_t * input) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, &control_right, {
+    MainInput(Widget * widget, input_t * input) : RotaryEncoderMenu<Widget>(MENU_INPUT_SELECT, widget, {
         new WidgetInputSelectionMenuItem(w_main_input[1], input, 0),
         new WidgetInputSelectionMenuItem(w_main_input[2], input, 1),
         new WidgetInputSelectionMenuItem(w_main_input[3], input, 2),
@@ -118,10 +118,10 @@ class MainPreset : public RotaryEncoderMenu<Widget>
 {
     uint8_t id;
 public:
-    MainPreset(Widget * widget, uint8_t id) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, &control_right, {
+    MainPreset(Widget * widget, uint8_t id) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, {
         new MainInput(w_main_preset[1], &settings.presets[id].input),
-        new QuickChannelTrim(w_main_preset[2], &control_right, settings.presets[id].channels),
-        new QuickTone(w_main_preset[3], &control_right, settings.presets[id].tone),
+        new QuickChannelTrim(w_main_preset[2], settings.presets[id].channels),
+        new QuickTone(w_main_preset[3], settings.presets[id].tone),
         new CopyFromMaster(w_main_preset[5], &settings.presets[id]),
         new WidgetSelectionMenuItem<uint8_t>(w_main_preset[6], &settings.selected_preset, id, selected_preset_changed),
         new WidgetBackMenuItem(w_main_preset[7]),
@@ -132,7 +132,7 @@ public:
 
     virtual void on_enter(unsigned long now) {
         RotaryEncoderMenu<Widget>::on_enter(now);
-        w_main_preset.get<WidgetLabel>(0)->set_text(String("PRESET ") + (this->id + 1));
+        w_main_preset.get<WidgetLabel>(0)->set_text(w_main_presets.get<WidgetLabel>(this->id + 1)->value);
         w_main_preset.set_redraw_all();
         w_main_preset.draw(&tft);
     }
@@ -141,7 +141,7 @@ public:
 class MainPresets : public RotaryEncoderMenu<Widget>
 {
 public:
-    MainPresets(Widget * widget) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, &control_right, {
+    MainPresets(Widget * widget) : RotaryEncoderMenu<Widget>(MENU_NONE, widget, {
         new MainPreset(w_main_presets[1], 0),
         new MainPreset(w_main_presets[2], 1),
         new MainPreset(w_main_presets[3], 2),
@@ -168,10 +168,10 @@ public:
 class MainMenu : public RotaryEncoderMenu<Widget>
 {
 public:
-    MainMenu() : RotaryEncoderMenu<Widget>(MENU_MAIN, NULL, &control_right, {
+    MainMenu() : RotaryEncoderMenu<Widget>(MENU_MAIN, NULL, {
         new MainInput(w_main[1], &settings.master.input),
-        new QuickChannelTrim(w_main[2], &control_right, settings.master.channels),
-        new QuickTone(w_main[3], &control_right, settings.master.tone),
+        new QuickChannelTrim(w_main[2], settings.master.channels),
+        new QuickTone(w_main[3], settings.master.tone),
         new MainPresets(w_main[4]),
         new MainLoad(w_main[6]),
         new MainSave(w_main[7]),

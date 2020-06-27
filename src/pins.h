@@ -14,8 +14,8 @@
 #define BUTTON_RIGHT_B PB4
 #define BUTTON_RIGHT_C PB3
 
-#define AMP_MUTE PB10
-#define AMP_FAULT PB11
+#define AMP_MUTE PB8
+#define AMP_FAULT PB9
 #define AMP_POWER PB0
 
 #define AMP_SCL PB6
