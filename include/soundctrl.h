@@ -84,8 +84,6 @@ void input_changed(bool reset_preset=true) {
 
 void volume_changed(bool reset_preset=true) {
     snd_processor.master(settings.master.volume);
-    if (reset_preset)
-        settings.selected_preset = 0xFF;
 }
 
 void tone_changed(bool reset_preset=true) {
@@ -102,6 +100,7 @@ void channel_trim_changed(bool reset_preset=true) {
 
 void read_audio(unsigned long now) {
   static int16_t smooth_raw[6] = {0};
+  static int16_t smooth_abs[6] = {0};
   static unsigned long last_now = micros();
   static float MIN_DB = log10(2048.0f);
   uint16_t total = 0;
@@ -110,14 +109,15 @@ void read_audio(unsigned long now) {
     return;
   last_now = now;
 
-  #define SMOOTH_RATE 30
+  #define SMOOTH_RATE 100
   for (int i = 0; i < 6; i++) {
-    smooth_raw[i] = (SMOOTH_RATE * (int32_t)smooth_raw[i] + ((int32_t)analogRead(PA0 + i) - vu_offset[i])) / (SMOOTH_RATE + 1);
+    smooth_raw[i] = analogRead(PA0 + i) - vu_offset[i];
+    smooth_abs[i] = (SMOOTH_RATE * (int32_t)smooth_abs[i] + (int32_t)abs(smooth_raw[i])) / (SMOOTH_RATE + 1);
   }
 
   // Use Peak to Peak
   for (int i = 0; i < 6; i++) {
-    uint16_t amp = abs(smooth_raw[i]);
+    uint16_t amp = smooth_abs[i];
     float lg = max(0.0f, log10(2048.0f / (float)(amp + 1)) / MIN_DB);
     amp = min((uint16_t)255, (uint16_t)((1 - lg) * 255));
     //w_debug.get<WidgetLabel>(i)->set_text(String("raw: ") + amp);
@@ -129,10 +129,10 @@ void read_audio(unsigned long now) {
 
   // TODO: determine if signal is coming
 
-  // static int x = 0;
-  // tft.drawFastVLine(x, 2*240/3, 2*240/3, WC_BLACK);
-  // tft.drawPixel(x, 2*240/3 + (240/3)/2 - (total * (240/3)/2) / 256, WC_WHITE);
-  // x = (x+1)%240;
+//   static int x = 0;
+//   tft.drawFastVLine(x, 2*240/3, 2*240/3, 0x0000);
+//   tft.drawPixel(x, 2*240/3 + (240/3)/2 - smooth_raw[0], 0xFFFF);
+//   x = (x+1)%240;
 
   // FFT processing, etc.
   if (!digitalRead(AMP_POWER))

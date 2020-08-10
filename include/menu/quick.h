@@ -83,20 +83,27 @@ public:
     }
 };
 
+#define SLEEP_BALLS_COUNT 11
 class QuickSleep : public WidgetMenuItem<Widget> {
     unsigned long last_now;
+    struct {
+        float dx, dy;
+    } velocities[SLEEP_BALLS_COUNT]; 
+    bool collisions[SLEEP_BALLS_COUNT * SLEEP_BALLS_COUNT];
     struct {
         uint16_t x, y;
         int16_t dx, dy;
         uint8_t r;
         uint16_t c;
-    } balls[13];
+    } balls[SLEEP_BALLS_COUNT];
+    float total_energy;
 public:
     QuickSleep(Widget * widget) : WidgetMenuItem<Widget>(MENU_SLEEP, widget) {}
 
     virtual void on_handle(unsigned long now) {
         auto btn = control_right.getButton();
         auto rot = control_right.getValue() + control_left.getValue();
+        back_light_level = DISPLAY_BL_SLEEP;
         if (btn == ClickEncoder::Released || digitalRead(AMP_POWER)) {
             digitalWrite(AMP_POWER, HIGH);
             delay(1000);
@@ -109,11 +116,52 @@ public:
             on_user_input();
         }
 
-        draw(true);
-        for (int i = 0; i < 13; i++) {
+        memset(collisions, 0, sizeof(collisions));
+        memset(velocities, 0, sizeof(velocities));
+
+        // first ball
+        for (int i = 0; i < SLEEP_BALLS_COUNT; i++) {
+            // second ball
+            for (int j = 0; j < SLEEP_BALLS_COUNT; j++) {
+                if (i == j) continue;
+                if (collisions[i * SLEEP_BALLS_COUNT + j]) continue;
+
+                float dx = balls[j].x / 256.0f - balls[i].x / 256.0f;
+                float dy = balls[j].y / 256.0f - balls[i].y / 256.0f;
+                float d2 = dx * dx + dy * dy;
+                float m1m2 = balls[i].r + balls[j].r;
+                if (d2 > m1m2 * m1m2) continue;
+                collisions[i * SLEEP_BALLS_COUNT + j] = collisions[j * SLEEP_BALLS_COUNT + i] = true;
+
+                float vx1 = balls[i].dx / 256.0f;
+                float vy1 = balls[i].dy / 256.0f;
+                float vx2 = balls[j].dx / 256.0f;
+                float vy2 = balls[j].dy / 256.0f;
+                float m1 = 2 * balls[j].r / m1m2;
+                float m2 = 2 * balls[i].r / m1m2;
+
+                float dotv1 = ((vx1 - vx2) * (-dx) + (vy1 - vy2) * (-dy)) / d2;
+                float dotv2 = ((vx2 - vx1) * dx + (vy2 - vy1) * dy) / d2;
+
+                velocities[i].dx -= m1 * (-dx) * dotv1; 
+                velocities[i].dy -= m1 * (-dy) * dotv1; 
+                velocities[j].dx -= m2 * dx * dotv2; 
+                velocities[j].dy -= m2 * dy * dotv2; 
+            }
+        }
+
+        for (int i = 0; i < SLEEP_BALLS_COUNT; i++) {
+            balls[i].dx += (int16_t)(velocities[i].dx * 256);
+            balls[i].dy += (int16_t)(velocities[i].dy * 256);
+        }
+
+        for (int i = 0; i < SLEEP_BALLS_COUNT; i++) {
             uint16_t x = balls[i].x + balls[i].dx;
             uint16_t y = balls[i].y + balls[i].dy;
             uint16_t r = balls[i].r; 
+
+            tft.fillCircle(balls[i].x >> 8, balls[i].y >> 8, balls[i].r, WC_BLACK);
+
             if ( x <= (r << 8) || x >= ((240 - r) << 8) ) 
                 balls[i].dx = -balls[i].dx;
             else
@@ -122,13 +170,9 @@ public:
                 balls[i].dy = -balls[i].dy;
             else
                 balls[i].y = y;
-        }
-        draw(false);
-    }
 
-    void draw(bool erase) {
-        for (int i = 0; i < 13; i++)
-            tft.fillCircle(balls[i].x >> 8, balls[i].y >> 8, balls[i].r, erase ? WC_BLACK : balls[i].c);
+            tft.fillCircle(balls[i].x >> 8, balls[i].y >> 8, balls[i].r, balls[i].c);
+        }
     }
 
     virtual void on_enter(unsigned long now) {
@@ -153,15 +197,15 @@ public:
             WC_YELLOW,
             WC_WHITE,
         };
-        for (int i = 0; i < 13; i++) {
-            balls[i].x = random(3, 237) << 8;
+        total_energy = 0;
+        for (int i = 0; i < SLEEP_BALLS_COUNT; i++) {
+            balls[i].x = (30 + i * 200 / SLEEP_BALLS_COUNT) << 8;
             balls[i].y = random(3, 237) << 8;
-            balls[i].dx = 0x0100 - (random(255) << 2);
-            balls[i].dy = 0x0100 - (random(255) << 2);
-            balls[i].r = random(3, 6);
+            balls[i].dx = 0x0100 - (random(255) << 1);
+            balls[i].dy = 0x0100 - (random(255) << 1);
+            balls[i].r = random(3, 7);
             balls[i].c = colors[random(sizeof(colors) / 2)];
         }
-        back_light_level = DISPLAY_BL_SLEEP;
     }
 };
 

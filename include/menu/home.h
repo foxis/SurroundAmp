@@ -30,23 +30,23 @@ WidgetContainer w_home_status(28, 10, WidgetContainer::HORIZONTAL, {
 //     new WidgetLabel(240, 16, ""),
 // }, 0);
 
-#ifdef __arm__
-// should use uinstd.h to define sbrk but Due causes a conflict
-extern "C" char* sbrk(int incr);
-#else  // __ARM__
-extern char *__brkval;
-#endif  // __arm__
+// #ifdef __arm__
+// // should use uinstd.h to define sbrk but Due causes a conflict
+// extern "C" char* sbrk(int incr);
+// #else  // __ARM__
+// extern char *__brkval;
+// #endif  // __arm__
  
-int freeMemory() {
-  char top;
-#ifdef __arm__
-  return &top - reinterpret_cast<char*>(sbrk(0));
-#elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
-  return &top - __brkval;
-#else  // __arm__
-  return __brkval ? &top - __brkval : &top - __malloc_heap_start;
-#endif  // __arm__
-}
+// int freeMemory() {
+//   char top;
+// #ifdef __arm__
+//   return &top - reinterpret_cast<char*>(sbrk(0));
+// #elif defined(CORE_TEENSY) || (ARDUINO > 103 && ARDUINO != 151)
+//   return &top - __brkval;
+// #else  // __arm__
+//   return __brkval ? &top - __brkval : &top - __malloc_heap_start;
+// #endif  // __arm__
+// }
 
 const String channel_map[] = {"S1", "S2", "S3", "S4", "6c"};
 const String preset_map[] = {"P1", "P2", "P3", "P4", "--"};
@@ -119,6 +119,7 @@ public:
     }
 
     virtual void on_enter(unsigned long now) {
+
         tft.fillScreen(WC_BLACK);
         control_left.getValue();
         control_right.getValue();
