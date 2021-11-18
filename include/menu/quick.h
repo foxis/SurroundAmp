@@ -105,9 +105,10 @@ public:
         auto rot = control_right.getValue() + control_left.getValue();
         back_light_level = DISPLAY_BL_SLEEP;
         if (btn == ClickEncoder::Released || digitalRead(AMP_POWER)) {
+            tft.init();
             digitalWrite(AMP_POWER, HIGH);
             delay(1000);
-            digitalWrite(AMP_MUTE, LOW);
+            digitalWrite(AMP_MUTE, HIGH);
             mute_changed(false);
             tft.fillScreen(WC_BLACK);
             reset(now);
@@ -126,8 +127,13 @@ public:
                 if (i == j) continue;
                 if (collisions[i * SLEEP_BALLS_COUNT + j]) continue;
 
-                float dx = balls[j].x / 256.0f - balls[i].x / 256.0f;
-                float dy = balls[j].y / 256.0f - balls[i].y / 256.0f;
+                uint16_t x1 = balls[i].x + balls[i].dx;
+                uint16_t x2 = balls[j].x + balls[j].dx;
+                uint16_t y1 = balls[i].y + balls[i].dy;
+                uint16_t y2 = balls[j].y + balls[j].dy;
+
+                float dx = ((int32_t)x2 - (int32_t)x1) / 256.0f;
+                float dy = ((int32_t)y2 - (int32_t)y1) / 256.0f;
                 float d2 = dx * dx + dy * dy;
                 float m1m2 = balls[i].r + balls[j].r;
                 if (d2 > m1m2 * m1m2) continue;
@@ -182,7 +188,8 @@ public:
         control_left.getButton();
         control_right.getButton();
         snd_processor.mute_all(true);
-        digitalWrite(AMP_MUTE, HIGH);
+        tft.init();
+        digitalWrite(AMP_MUTE, LOW);
         delay(500);
         digitalWrite(AMP_POWER, LOW);
         tft.fillScreen(WC_BLACK);

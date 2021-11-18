@@ -31,10 +31,10 @@ void setup_soundctrl() {
     snd_selector.mute_all(true);
     snd_processor.mute_all(true);
 
-    digitalWrite(AMP_MUTE, HIGH);
+    digitalWrite(AMP_MUTE, LOW);
     digitalWrite(AMP_POWER, HIGH);
     delay(1000);
-    digitalWrite(AMP_MUTE, LOW);
+    digitalWrite(AMP_MUTE, HIGH);
 
     const int N = 1000;
     for (int j = 0; j < 6; j++) {

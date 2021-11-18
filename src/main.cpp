@@ -35,7 +35,9 @@ Home menu_home({
 
 
 void setup() {
+  //pinMode(DISPLAY_RST, OUTPUT);
   pinMode(DISPLAY_BL, OUTPUT);
+  //pinMode(DISPLAY_CS, OUTPUT);
   pinMode(AMP_MUTE, OUTPUT);
   pinMode(AMP_FAULT, INPUT);
   pinMode(AMP_POWER, OUTPUT);
@@ -46,6 +48,8 @@ void setup() {
   pinMode(PA4, INPUT_ANALOG);
   pinMode(PA5, INPUT_ANALOG);
   pinMode(PA6, INPUT_ANALOG);
+
+  digitalWrite(DISPLAY_RST, HIGH);
 
   analogReadResolution(12);
   analogWrite(DISPLAY_BL, DISPLAY_BL_DEFAULT); // Backlight on
